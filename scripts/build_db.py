@@ -6,8 +6,11 @@ import csv
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import shutil
 import sqlite3
+import tempfile
 
 import numpy as np
 from PIL import Image
@@ -79,8 +82,11 @@ def main():
     data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "processed/masks").mkdir(parents=True, exist_ok=True)
     db_path = data_dir / "particles.db"
-    temporary = data_dir / "particles.db.partial"
-    temporary.unlink(missing_ok=True)
+    # Build outside a cloud-synchronized project directory: a background sync
+    # replacing an actively written SQLite inode can invalidate its indexes.
+    fd, temporary_name = tempfile.mkstemp(prefix="em-etl-db-", suffix=".db")
+    os.close(fd)
+    temporary = Path(temporary_name)
     con = sqlite3.connect(temporary)
     try:
         con.executescript((ROOT / "schema.sql").read_text())
@@ -132,7 +138,15 @@ def main():
                     raise ValueError(f"Incomplete source {source['id']}: {count}")
         write_exports(con, data_dir)
         con.close()
-        temporary.replace(db_path)
+        incoming = data_dir / "particles.db.partial"
+        shutil.move(str(temporary), str(incoming))
+        incoming.replace(db_path)
+        # Check the published file as well as the still-open working database.
+        with sqlite3.connect(db_path) as published:
+            if published.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise ValueError("Published database failed integrity check")
+            if published.execute("SELECT COUNT(*) FROM images").fetchone()[0] != len(samples):
+                raise ValueError("Published database lost rows")
     except BaseException:
         con.close()
         temporary.unlink(missing_ok=True)
