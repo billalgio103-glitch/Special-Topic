@@ -1,0 +1,48 @@
+name: Reproduce ETL with Podman
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - 'sources.lock.json'
+      - 'schema.sql'
+      - 'requirements*'
+      - 'Justfile'
+      - 'Makefile'
+      - 'Containerfile'
+      - '.github/workflows/etl.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etl-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Prepare the disposable runner
+        run: |
+          # These unused SDKs belong to this fresh, disposable hosted runner.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo apt-get update -qq
+          sudo apt-get install -y podman
+          curl --fail --location --retry 3 -o /tmp/just.tar.gz https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz
+          echo '4a5cc2f53e6f0f8c59092a6cc38291eb729d46a7dd95d3ae582008881b84931d  /tmp/just.tar.gz' | sha256sum -c -
+          sudo tar -xzf /tmp/just.tar.gz -C /usr/local/bin just
+          df -h .
+      - name: Run the exact assignment entry point
+        run: just
+      - name: Scientific semantics tests
+        run: podman run --rm --userns=keep-id -v "$PWD:/work:Z" -w /work special-topic-etl make test
+      - name: Report the generated database
+        run: |
+          cat data/validation.json
+          ls -lh data/particles.db data/figures/*.png
