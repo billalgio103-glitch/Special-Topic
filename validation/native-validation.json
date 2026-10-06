@@ -1,0 +1,91 @@
+{
+  "status": "passed",
+  "scope": "full",
+  "source_counts": {
+    "cobalt": 256,
+    "emps": 465,
+    "hrtem": 407
+  },
+  "expected_counts": {
+    "emps": 465,
+    "hrtem": 407,
+    "cobalt": 256
+  },
+  "database_fingerprint": "cab870d82508ffcb3589248f91797cef2ab4e00fbb51bddf8413da16d310c5a3",
+  "objects": 23386,
+  "calibration_counts": [
+    {
+      "source_id": "cobalt",
+      "calibration_status": "range_only_67_to_86_pm_no_per_image_mapping",
+      "n": 256
+    },
+    {
+      "source_id": "emps",
+      "calibration_status": "scale_bar_requires_manual_calibration",
+      "n": 465
+    },
+    {
+      "source_id": "hrtem",
+      "calibration_status": "dm3_header",
+      "n": 407
+    }
+  ],
+  "splits": [
+    {
+      "source_id": "cobalt",
+      "split": "train",
+      "image_count": 256,
+      "object_count": 3790,
+      "mean_foreground_fraction": 0.3863496631383896,
+      "calibrated_images": 0
+    },
+    {
+      "source_id": "emps",
+      "split": "test",
+      "image_count": 68,
+      "object_count": 2073,
+      "mean_foreground_fraction": 0.3425818747118255,
+      "calibrated_images": 0
+    },
+    {
+      "source_id": "emps",
+      "split": "train",
+      "image_count": 338,
+      "object_count": 7862,
+      "mean_foreground_fraction": 0.34792392866610955,
+      "calibrated_images": 0
+    },
+    {
+      "source_id": "emps",
+      "split": "validation",
+      "image_count": 59,
+      "object_count": 1600,
+      "mean_foreground_fraction": 0.2497464645033437,
+      "calibrated_images": 0
+    },
+    {
+      "source_id": "hrtem",
+      "split": "test",
+      "image_count": 78,
+      "object_count": 2997,
+      "mean_foreground_fraction": 0.03720563573715014,
+      "calibrated_images": 78
+    },
+    {
+      "source_id": "hrtem",
+      "split": "train",
+      "image_count": 264,
+      "object_count": 4629,
+      "mean_foreground_fraction": 0.05857966411294359,
+      "calibrated_images": 264
+    },
+    {
+      "source_id": "hrtem",
+      "split": "validation",
+      "image_count": 65,
+      "object_count": 435,
+      "mean_foreground_fraction": 0.03501534186876737,
+      "calibrated_images": 65
+    }
+  ]
+}

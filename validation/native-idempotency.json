@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "scope": "full",
+  "method": "Compare the validated full database against a complete rebuild from the same locked raw assets",
+  "runs": [
+    {
+      "fingerprint": "cab870d82508ffcb3589248f91797cef2ab4e00fbb51bddf8413da16d310c5a3",
+      "images": 1128,
+      "objects": 23386
+    },
+    {
+      "fingerprint": "cab870d82508ffcb3589248f91797cef2ab4e00fbb51bddf8413da16d310c5a3",
+      "images": 1128,
+      "objects": 23386
+    }
+  ]
+}

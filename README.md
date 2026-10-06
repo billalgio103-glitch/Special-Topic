@@ -200,4 +200,7 @@ See the original records for full attribution and license terms.
 
 ## Verification status
 
-See `VALIDATION.md` for what was actually executed during preparation.
+See [VALIDATION.md](VALIDATION.md) and the reports in `validation/` for the
+full-source execution and idempotency results. The
+[GitHub Actions workflow](https://github.com/billalgio103-glitch/Special-Topic/actions/workflows/etl.yml)
+repeats the default `just` command in a clean Podman environment on code changes.
