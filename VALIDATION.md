@@ -56,5 +56,18 @@ GitHub Actions runner executes the exact default `just` command, followed by
 
 [Container execution log](https://github.com/billalgio103-glitch/Special-Topic/actions/runs/37539035191)
 
-Status at this documentation checkpoint: running. Native checks above have
-passed; container success will only be recorded after the workflow finishes.
+**Passed on 2026-10-06.** The clean runner downloaded all sources and completed
+`just`, including database construction, full verification and all three figures.
+All eight container tests also passed. The run took approximately 17 minutes;
+download time varies with network conditions.
+
+The container database contained the same 1,128 images and 23,386 objects, and
+its logical fingerprint exactly matched the native builds above. The SQL summary
+view's floating-point averages can differ in their final digit between SQLite
+builds; the stored database rows and their fingerprint matched.
+
+See [`validation/ci-validation.json`](validation/ci-validation.json) for the
+report extracted from the workflow log and
+[`validation/ci-run.json`](validation/ci-run.json) for the tested source commit
+and workflow result. Subsequent documentation-only commits do not change the
+tested ETL code.
