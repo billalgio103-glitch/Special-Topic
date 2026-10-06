@@ -7,10 +7,10 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import tempfile
 import time
 import urllib.request
+from atomic_files import publish_file, write_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,10 +62,8 @@ def download(item: dict, data_dir: Path) -> tuple[str, str]:
             checksum = digest(partial)
             # Stream into the OS temporary directory, then publish once. This
             # avoids syncing incomplete multi-GB files in cloud workspaces.
-            local_partial = path.with_suffix(path.suffix + ".partial")
-            shutil.move(str(partial), str(local_partial))
-            local_partial.replace(path)
-            path.with_suffix(path.suffix + ".sha256").write_text(checksum + "\n")
+            publish_file(partial, path)
+            write_text(path.with_suffix(path.suffix + ".sha256"), checksum + "\n")
             return item["path"], "downloaded"
         except Exception:
             partial.unlink(missing_ok=True)

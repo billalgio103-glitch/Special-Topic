@@ -8,6 +8,7 @@ import sys
 
 from download import ROOT
 from verify import fingerprint
+from atomic_files import write_text
 
 
 def main():
@@ -27,7 +28,7 @@ def main():
     if results[0] != results[1]:
         raise SystemExit(f"Idempotency failed: {results}")
     report = {"status": "passed", "scope": "subset" if args.limit is not None else "full", "runs": results}
-    (args.data_dir / "idempotency.json").write_text(json.dumps(report, indent=2) + "\n")
+    write_text(args.data_dir / "idempotency.json", json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
 
 

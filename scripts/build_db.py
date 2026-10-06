@@ -4,11 +4,11 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import io
 import json
 import math
 import os
 from pathlib import Path
-import shutil
 import sqlite3
 import tempfile
 
@@ -17,6 +17,7 @@ from PIL import Image
 from scipy import ndimage
 
 from common import load_native
+from atomic_files import publish_file, write_bytes, write_text
 from download import ROOT, digest, selected_samples, valid
 
 
@@ -62,10 +63,11 @@ def write_exports(connection, data_dir):
     }
     for name, query in queries.items():
         cur = connection.execute(query)
-        with (exports / f"{name}.csv").open("w", newline="") as out:
-            writer = csv.writer(out)
-            writer.writerow([c[0] for c in cur.description])
-            writer.writerows(cur)
+        out = io.StringIO(newline="")
+        writer = csv.writer(out)
+        writer.writerow([c[0] for c in cur.description])
+        writer.writerows(cur)
+        write_text(exports / f"{name}.csv", out.getvalue())
 
 
 def main():
@@ -103,7 +105,10 @@ def main():
             image_id = sample["id"]
             mask_rel = "processed/masks/" + hashlib.sha256(image_id.encode()).hexdigest()[:24] + ".png"
             mask_path = data_dir / mask_rel
-            Image.fromarray((labels > 0).astype(np.uint8) * 255).save(mask_path)
+            mask_buffer = io.BytesIO()
+            Image.fromarray((labels > 0).astype(np.uint8) * 255).save(mask_buffer, format="PNG")
+            mask_bytes = mask_buffer.getvalue()
+            write_bytes(mask_path, mask_bytes)
             objects = list(object_measurements(labels, kind == "particle_instance", px, py))
             meta = sample["metadata"]
             split_note = ("All cobalt patches kept in train: parent mapping unavailable" if sample["dataset"] == "cobalt"
@@ -112,7 +117,7 @@ def main():
             values = {
                 "image_id": image_id, "source_id": sample["dataset"], "source_key": sample["source_key"],
                 "image_asset": sample["image_asset"], "mask_asset": sample["mask_asset"], "array_index": sample.get("array_index"),
-                "binary_mask_path": mask_rel, "binary_mask_sha256": digest(mask_path),
+                "binary_mask_path": mask_rel, "binary_mask_sha256": hashlib.sha256(mask_bytes).hexdigest(),
                 "width": image.shape[1], "height": image.shape[0], "original_dtype": str(image.dtype),
                 "mask_type": mask_type, "object_kind": kind, "pixel_size_x_nm": px, "pixel_size_y_nm": py,
                 "calibration_status": status, "group_id": sample["group_id"], "split": splits[sample["group_id"]],
@@ -138,9 +143,7 @@ def main():
                     raise ValueError(f"Incomplete source {source['id']}: {count}")
         write_exports(con, data_dir)
         con.close()
-        incoming = data_dir / "particles.db.partial"
-        shutil.move(str(temporary), str(incoming))
-        incoming.replace(db_path)
+        publish_file(temporary, db_path)
         # Check the published file as well as the still-open working database.
         with sqlite3.connect(db_path) as published:
             if published.execute("PRAGMA integrity_check").fetchone()[0] != "ok":

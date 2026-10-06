@@ -1,5 +1,6 @@
 """Preliminary descriptive figures from SQLite, plus source/mask QC examples."""
 import argparse
+import io
 from pathlib import Path
 import sqlite3
 
@@ -10,6 +11,13 @@ import numpy as np
 
 from common import load_native
 from download import ROOT
+from atomic_files import write_bytes
+
+
+def save_figure(fig, path, dpi):
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", dpi=dpi)
+    write_bytes(path, buffer.getvalue())
 
 
 def main():
@@ -32,7 +40,7 @@ def main():
         axes[1].hist(fractions, bins=np.linspace(0, 1, 21), histtype="step", linewidth=2, label=s)
     axes[1].set(xlabel="Foreground area fraction", ylabel="Images", title="Foreground coverage")
     axes[1].legend()
-    fig.savefig(out / "dataset_overview.png", dpi=180)
+    save_figure(fig, out / "dataset_overview.png", dpi=180)
     plt.close(fig)
     fig, axes = plt.subplots(len(sources), 2, figsize=(8, 4 * len(sources)), squeeze=False, constrained_layout=True)
     for row, source in enumerate(sources):
@@ -46,7 +54,7 @@ def main():
         axes[row, 1].set_title("Foreground boundary overlay")
         for axis in axes[row]:
             axis.axis("off")
-    fig.savefig(out / "mask_alignment_qc.png", dpi=150)
+    save_figure(fig, out / "mask_alignment_qc.png", dpi=150)
     plt.close(fig)
     fig, axes = plt.subplots(1, len(sources), figsize=(12, 4), squeeze=False, constrained_layout=True)
     for axis, source in zip(axes[0], sources):
@@ -57,7 +65,7 @@ def main():
         kind = "Particle instances" if source == "emps" else "Connected components"
         axis.set(title=f"{source}: {kind}", xlabel="Equivalent diameter (pixels)", ylabel="Objects (log scale)")
     fig.suptitle("Border objects excluded; pixels are not comparable physical sizes across sources")
-    fig.savefig(out / "object_sizes_pixels.png", dpi=180)
+    save_figure(fig, out / "object_sizes_pixels.png", dpi=180)
     plt.close(fig)
     con.close()
     print(f"Wrote figures to {out}")

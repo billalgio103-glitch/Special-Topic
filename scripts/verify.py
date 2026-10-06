@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from download import ROOT, digest
+from atomic_files import write_text
 
 
 def fingerprint(con):
@@ -57,7 +58,7 @@ def verify(data_dir, allow_subset=False):
               "calibration_counts": [dict(r) for r in con.execute("SELECT source_id,calibration_status,COUNT(*) AS n FROM images GROUP BY source_id,calibration_status")],
               "splits": [dict(r) for r in con.execute("SELECT * FROM dataset_summary ORDER BY source_id,split")]}
     con.close()
-    (data_dir / "validation.json").write_text(json.dumps(report, indent=2) + "\n")
+    write_text(data_dir / "validation.json", json.dumps(report, indent=2) + "\n")
     return report
 
 
