@@ -5,16 +5,28 @@ one SQLite database for segmentation model development and preliminary figures.
 This repository implements the ETL stage, not model training or the instructor's
 held-out evaluation server.
 
-## Run the assignment
+## Assignment submission and execution
+
+Repository URL to submit:
+
+https://github.com/billalgio103-glitch/Special-Topic
+
+This submission uses the Git repository option in the assignment instructions.
+The repository contains all code needed to download the source data and construct
+the fully populated database. A separate `.tar.gz` submission is not required.
 
 Install Git, **Podman**, and **just** on the host, start Podman if your operating
-system requires a Podman VM, then run:
+system requires a Podman VM, then run the assignment's one-line command:
 
 ```sh
-git clone https://github.com/billalgio103-glitch/Special-Topic.git
-cd Special-Topic
-just
+git clone https://github.com/billalgio103-glitch/Special-Topic.git && cd Special-Topic && just
 ```
+
+On successful completion, `data/particles.db` contains all **1,128 image
+records** (465 EMPS, 407 HRTEM and 256 Co3O4) and **23,386 instance/component
+measurements**. The same command also generates CSV exports and three
+preliminary figures in `data/figures/`. No manual data download or separate
+database population command is needed.
 
 On Windows use the instructor's WSL/Ubuntu setup. Run commands inside Ubuntu.
 No API key, GPU, or private data credentials are needed for these public sources.
