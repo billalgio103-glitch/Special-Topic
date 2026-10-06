@@ -55,6 +55,30 @@ or corrupted. It never silently substitutes synthetic data or submits a subset.
 | `data/figures/` | Dataset overview, label overlays, and pixel-size histograms |
 | `data/validation.json` | Completeness, integrity and split-isolation checks |
 
+## Generated result preview
+
+The checked execution produced 1,128 image records and 23,386 measured particle
+instances or connected components. A compact generated summary is available at
+[`docs/results/dataset_summary.csv`](docs/results/dataset_summary.csv).
+
+### Dataset composition and foreground coverage
+
+![Dataset composition and foreground coverage](docs/results/dataset_overview.jpg)
+
+### Input/target alignment quality control
+
+Red contours show the supplied ground-truth mask boundaries, not model
+predictions.
+
+![Input images and ground-truth mask boundaries](docs/results/mask_alignment_qc.jpg)
+
+### Object-size distributions
+
+These diameters are in pixels. Pixel sizes are not directly comparable between
+the three sources.
+
+![Object-size distributions](docs/results/object_sizes_pixels.jpg)
+
 **The DB contains measurements and references, not duplicate multi-GB image
 BLOBs.** Keep the entire generated `data/` directory when moving the database.
 The original data and normalized masks are required for training. All paths

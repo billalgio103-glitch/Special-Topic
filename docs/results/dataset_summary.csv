@@ -1,0 +1,8 @@
+source_id,split,image_count,object_count,mean_foreground_fraction,calibrated_images
+cobalt,train,256,3790,0.3863496631383896,0
+emps,test,68,2073,0.3425818747118255,0
+emps,train,338,7862,0.34792392866610955,0
+emps,validation,59,1600,0.2497464645033437,0
+hrtem,test,78,2997,0.03720563573715014,78
+hrtem,train,264,4629,0.05857966411294359,264
+hrtem,validation,65,435,0.03501534186876737,65
