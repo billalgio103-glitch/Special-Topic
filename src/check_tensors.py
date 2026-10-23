@@ -40,6 +40,16 @@ def check(data_dir, allow_subset=False):
         assert set(t["masks"].unique().tolist()) <= {0, 1}, "Nonbinary mask"
         expected = [i for i, (_, _, split) in db.items() if split in splits]
         assert meta["image_ids"] == expected, f"{name} rows differ from DB splits {splits}"
+        # Index tensors must be complete and in range; negative ids would wrap in Python indexing.
+        bounds = {"source": len(SOURCES), "group": len(meta["group_ids"])}
+        if name == "train":
+            bounds["fold"] = meta["k_folds"]
+        else:
+            assert "fold" not in t, "Fold ids belong to the training file only"
+        for key, upper in bounds.items():
+            assert key in t, f"Missing {key} tensor in {path}"
+            assert t[key].shape == (n,) and t[key].dtype == torch.int64, f"Bad {key} tensor in {path}"
+            assert ((t[key] >= 0) & (t[key] < upper)).all(), f"{key} id out of range in {path}"
         for i, image_id in enumerate(meta["image_ids"]):
             source, group, _ = db[image_id]
             assert SOURCES[t["source"][i]] == source, f"Source mismatch: {image_id}"

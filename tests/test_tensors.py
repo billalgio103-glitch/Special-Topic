@@ -8,6 +8,8 @@ import unittest
 
 import numpy as np
 from PIL import Image
+from safetensors import safe_open
+from safetensors.numpy import save
 from safetensors.torch import load_file
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -85,6 +87,29 @@ class Export(unittest.TestCase):
             x, y = next(iter(DataLoader(TensorDataset(t["images"], t["masks"]), batch_size=4)))
             self.assertEqual(tuple(x.shape), (4, 1, 16, 16))
             self.assertEqual(len(set(zip(t["group"].tolist(), t["fold"].tolist()))), 3)
+
+    def test_checker_rejects_bad_index_tensors(self):
+        layout = [("emps:a", "train"), ("emps:b", "validation"), ("emps:c", "train"), ("emps:d", "test")]
+        corruptions = {
+            "missing fold": lambda t: t.pop("fold"),
+            "truncated fold": lambda t: t.update(fold=t["fold"][:-1]),
+            "fold out of range": lambda t: t["fold"].__setitem__(0, 7),
+            "negative group": lambda t: t["group"].__setitem__(0, -1),
+            "negative source": lambda t: t["source"].__setitem__(0, -1),
+        }
+        for label, corrupt in corruptions.items():
+            with self.subTest(label), tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+                data = Path(tmp)
+                make_data_dir(data, layout)
+                export(data, size=16, k=2)
+                path = data / "inputs" / "train.safetensors"
+                with safe_open(path, framework="np") as f:
+                    metadata = f.metadata()
+                    tensors = {k: f.get_tensor(k).copy() for k in f.keys()}
+                corrupt(tensors)
+                path.write_bytes(save(tensors, metadata=metadata))
+                with self.assertRaises(AssertionError):
+                    check(data)
 
     def test_group_in_two_splits_is_rejected(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # Windows keeps mmaps open

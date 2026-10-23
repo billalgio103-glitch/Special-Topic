@@ -114,8 +114,23 @@ downloaded every asset.
 
 ### Development-subset checks
 
-Local checks on the 40-image EMPS subset (Windows, Python 3.12, native venv, no
-Podman) passed:
+Local checks on a 40-image EMPS subset (Windows, Python 3.12, native venv, no
+Podman) passed. The subset is the first 40 `emps` entries of `samples`, in
+`sources.lock.json` order, applied to a throwaway copy of the repository:
+
+```python
+import json
+m = json.load(open("sources.lock.json"))
+S = [s for s in m["samples"] if s["dataset"] == "emps"][:40]
+need = {s[k] for s in S for k in ("image_asset", "mask_asset")}
+m["samples"] = S
+m["assets"] = [a for a in m["assets"] if a["path"] in need]
+m["sources"] = [dict(s, expected_samples=len(S)) for s in m["sources"] if s["id"] == "emps"]
+json.dump(m, open("sources.lock.json", "w"))
+```
+
+A different 40-image selection gives a different train/eval count, because the
+split follows whole groups. Results for this selection:
 
 - export and `check_tensors.py`: 32 train images (31 groups, 5 folds), 8 eval
   images (6 groups), with no group or image shared between them;
