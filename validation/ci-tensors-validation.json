@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "files": {
+    "train": {
+      "path": "inputs/train.safetensors",
+      "sha256": "f0c46d30c570e6b508bfb72c4251f2351d1c6f9b7878531e4149890267f88260",
+      "images": 982,
+      "per_source": {
+        "emps": 397,
+        "hrtem": 329,
+        "cobalt": 256
+      },
+      "groups": 284,
+      "per_fold": {
+        "0": 420,
+        "1": 95,
+        "2": 144,
+        "3": 218,
+        "4": 105
+      }
+    },
+    "eval": {
+      "path": "inputs/eval.safetensors",
+      "sha256": "efc1fb8d5644d5c5e70b4c05607a1e8a363aafabab097155d6dbdbfb01c4f203",
+      "images": 146,
+      "per_source": {
+        "emps": 68,
+        "hrtem": 78,
+        "cobalt": 0
+      },
+      "groups": 50,
+      "per_fold": null
+    }
+  },
+  "db_fingerprint": "cab870d82508ffcb3589248f91797cef2ab4e00fbb51bddf8413da16d310c5a3"
+}
