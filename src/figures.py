@@ -36,7 +36,7 @@ def main():
     axes[0].set(xticks=np.arange(len(sources)), xticklabels=sources, ylabel="Images", title="Source and grouped split counts")
     axes[0].legend()
     for s in sources:
-        fractions = [r[0] for r in con.execute("SELECT 1.0*foreground_pixels/(width*height) FROM images WHERE source_id=?", (s,))]
+        fractions = [r[0] for r in con.execute("SELECT 1.0*foreground_pixels/(width*height) FROM images WHERE source_id=? ORDER BY image_id", (s,))]
         axes[1].hist(fractions, bins=np.linspace(0, 1, 21), histtype="step", linewidth=2, label=s)
     axes[1].set(xlabel="Foreground area fraction", ylabel="Images", title="Foreground coverage")
     axes[1].legend()
@@ -58,7 +58,7 @@ def main():
     plt.close(fig)
     fig, axes = plt.subplots(1, len(sources), figsize=(12, 4), squeeze=False, constrained_layout=True)
     for axis, source in zip(axes[0], sources):
-        values = [r[0] for r in con.execute("SELECT equivalent_diameter_px FROM size_measurements WHERE source_id=?", (source,))]
+        values = [r[0] for r in con.execute("SELECT equivalent_diameter_px FROM size_measurements WHERE source_id=? ORDER BY image_id,label_id", (source,))]
         if values:
             axis.hist(values, bins=40, color="#23678a")
             axis.set_yscale("log")

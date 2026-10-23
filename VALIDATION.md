@@ -71,3 +71,19 @@ report extracted from the workflow log and
 [`validation/ci-run.json`](validation/ci-run.json) for the tested source commit
 and workflow result. Subsequent documentation-only commits do not change the
 tested ETL code.
+
+## ETL Part II: safetensors export
+
+`just pipeline` now continues after the DB to `data/inputs/{train,eval}.safetensors`.
+`just check` reloads both files with `safetensors.torch.load_file` and
+`TensorDataset`/`DataLoader`. Local checks on the 40-image EMPS development subset
+(Windows, Python 3.12, native venv, no Podman) passed:
+
+- export and `check_tensors.py`: 32 train images (31 groups, 5 folds), 8 eval
+  images (6 groups), with no group or image shared between them;
+- `check_idempotency.py`: identical DB fingerprint and identical SHA-256 for both
+  tensor files across two rebuilds;
+- 2 HRTEM DM3 images: export to 256 x 256 kept the foreground fraction (0.60%).
+
+The full 1,128-image tensor export has not yet been recorded here. The GitHub
+Actions workflow runs it with `just pipeline` and `just check`.

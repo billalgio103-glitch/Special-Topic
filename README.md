@@ -19,8 +19,13 @@ Install Git, **Podman**, and **just** on the host, start Podman if your operatin
 system requires a Podman VM, then run the assignment's one-line command:
 
 ```sh
-git clone https://github.com/billalgio103-glitch/Special-Topic.git && cd Special-Topic && just
+git clone https://github.com/billalgio103-glitch/Special-Topic.git && cd Special-Topic && just && just check
 ```
+
+`just` is the same as `just pipeline`. It builds the DB and then writes the model
+inputs `data/inputs/train.safetensors` and `data/inputs/eval.safetensors`.
+`just check` verifies the DB again, reloads both tensor files with PyTorch and
+runs the unit tests.
 
 On successful completion, `data/particles.db` contains all **1,128 image
 records** (465 EMPS, 407 HRTEM and 256 Co3O4) and **23,386 instance/component
@@ -36,7 +41,7 @@ stable connection. Subsequent runs verify and reuse cached source files.
 
 The entry point follows the supplied template's direct-Podman route:
 
-`Justfile -> Containerfile -> Makefile -> scripts/*.py -> data/particles.db`
+`Justfile -> Containerfile -> Makefile -> src/*.py -> data/particles.db -> data/inputs/{train,eval}.safetensors`
 
 `compose.yml` is unnecessary for this single-container workflow. The default
 recipe downloads all three sources and fails if a required file is unavailable
@@ -54,6 +59,9 @@ or corrupted. It never silently substitutes synthetic data or submits a subset.
 | `data/exports/size_measurements.csv` | Border-excluded instance/component measurements |
 | `data/figures/` | Dataset overview, label overlays, and pixel-size histograms |
 | `data/validation.json` | Completeness, integrity and split-isolation checks |
+| `data/inputs/train.safetensors` | Model inputs: DB `train` + `validation` groups, with group k-fold ids |
+| `data/inputs/eval.safetensors` | Held-out model inputs: DB `test` groups only |
+| `data/inputs/tensors_validation.json` | Tensor reload, shape and leakage checks; file SHA-256 |
 
 ## Generated result preview
 
@@ -83,7 +91,7 @@ the three sources.
 BLOBs.** Keep the entire generated `data/` directory when moving the database.
 The original data and normalized masks are required for training. All paths
 inside the DB are relative to this directory (`assets.asset_path` is relative
-to `data/raw/`). `scripts/common.py:training_pair` reads any of the three native
+to `data/raw/`). `src/common.py:training_pair` reads any of the three native
 formats and returns a full-resolution float32 image and binary target.
 
 For example, from the repository root in Python:
@@ -92,7 +100,7 @@ For example, from the repository root in Python:
 import sqlite3
 import sys
 from pathlib import Path
-sys.path.insert(0, "scripts")
+sys.path.insert(0, "src")
 from common import training_pair
 
 con = sqlite3.connect("data/particles.db")
@@ -101,6 +109,51 @@ record = dict(con.execute("SELECT * FROM images WHERE split='train' LIMIT 1").fe
 x, y = training_pair(record, Path("data"))
 con.close()
 ```
+
+## Model inputs (safetensors)
+
+`src/export_tensors.py` reads `data/particles.db` (`ORDER BY image_id`), loads
+each image with `training_pair`, then area-averages the z-scored image to
+256 x 256. Masks are area-averaged and thresholded at 0.5. Non-square images
+are stretched to a square; `data/raw/` still holds the full-resolution originals.
+
+| Tensor | Shape and dtype | Meaning |
+| --- | --- | --- |
+| `images` | `[N,1,256,256]` float32 | Per-image z-scored input |
+| `masks` | `[N,1,256,256]` uint8 | Binary target, 0 or 1 |
+| `source` | `[N]` int64 | 0 EMPS, 1 HRTEM, 2 Co3O4 |
+| `group` | `[N]` int64 | Index into the file's metadata `group_ids` |
+| `fold` | `[N]` int64, train only | Group k-fold id, 0 to 4 |
+
+Each file has one metadata entry, `etl`. It is JSON with the row `image_ids`,
+`group_ids`, the source DB fingerprint, the seed (5937), size, `k_folds` and the
+split mapping.
+
+```python
+from safetensors.torch import load_file
+from torch.utils.data import DataLoader, TensorDataset
+
+train = load_file("data/inputs/train.safetensors")
+held_out = load_file("data/inputs/eval.safetensors")
+train_loader = DataLoader(TensorDataset(train["images"], train["masks"].float()),
+                          batch_size=16, shuffle=True)
+
+# Cross validation: groups never cross folds.
+k = 0
+fit, val = train["fold"] != k, train["fold"] == k
+fit_set = TensorDataset(train["images"][fit], train["masks"][fit])
+val_set = TensorDataset(train["images"][val], train["masks"][val])
+```
+
+**Leakage rules.** The DB split is per group. `train.safetensors` holds the DB
+`train` and `validation` groups, and `eval.safetensors` holds only `test` groups.
+Folds are assigned per group: within each source, groups are ordered by
+`sha256("fold-v1:<seed>:<group>")` and dealt round-robin into 5 folds. Normalization
+uses only the image itself, so no statistic is fitted across splits. Export
+refuses to write if an image or group appears in both files. `check_tensors.py`
+recomputes the expected rows from the DB, checks that each group has a single
+fold, and checks that both files carry the current DB fingerprint. The Co3O4
+source is one group. It is all in `train` and in one fold.
 
 ## Sources and conversions
 
@@ -121,7 +174,7 @@ ETL stage. The separate 6.4 GB `TEM_images.zip` and model-predicted segmentation
 archive are not substituted for the hand-labeled training examples.
 
 Raw values are retained. RGB EMPS images are converted to luminance only when
-loaded. There is no geometric resizing, cropping, guessed calibration, or
+loaded. The DB and `training_pair` use no geometric resizing, cropping, guessed calibration, or
 intensity clipping. `training_pair` performs per-image z-score normalization;
 it does not fit statistics using validation/test images. Figure contrast
 adjustments affect display only.
@@ -183,18 +236,21 @@ remains separate and is not included here.
 - The database is rebuilt in a temporary SQLite file and replaces the prior
   DB only after successful parsing and integrity checks. No append-only
   ingestion or duplicate accumulation occurs.
-- Output rows and groups have deterministic identities and ordering. No
-  retrieval timestamps or absolute workstation paths enter the DB fingerprint.
+- Output rows and groups have deterministic identities and ordering. Every
+  multi-row query uses `ORDER BY`; split and fold assignment use fixed seeds.
+  No retrieval timestamps or absolute workstation paths enter the DB fingerprint.
+- Tensor files are written atomically, and a rerun produces byte-identical files.
 
 After `just`, run:
 
 ```sh
-just verify
+just check
 just idempotency
 ```
 
-The second command builds twice from the same source files and checks exact
-logical table fingerprints and row counts. It writes `data/idempotency.json`.
+`just idempotency` builds the DB and the tensors twice from the same source files.
+It checks the exact logical table fingerprints, the row counts and the SHA-256 of
+both safetensors files. It writes `data/idempotency.json`.
 
 ## Local development without containers
 
@@ -203,12 +259,13 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements.lock
 make all
-make test
+make check
 make idempotency
 ```
 
 For a development subset only, pass `--limit 2` to `download.py` and
-`build_db.py`, then use `verify.py --allow-subset`. Cobalt's HDF5 files still
+`build_db.py`, then use `--allow-subset` with `verify.py`, `export_tensors.py`
+and `check_tensors.py`. Cobalt's HDF5 files still
 need downloading in full. A subset is **not** a complete assignment submission.
 
 ## Example database queries
@@ -239,4 +296,4 @@ See the original records for full attribution and license terms.
 See [VALIDATION.md](VALIDATION.md) and the reports in `validation/` for the
 full-source execution and idempotency results. The
 [GitHub Actions workflow](https://github.com/billalgio103-glitch/Special-Topic/actions/workflows/etl.yml)
-repeats the default `just` command in a clean Podman environment on code changes.
+repeats `just pipeline` and `just check` in a clean Podman environment on code changes.

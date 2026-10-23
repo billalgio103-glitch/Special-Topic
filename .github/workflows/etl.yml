@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/**'
+      - 'src/**'
       - 'tests/**'
       - 'sources.lock.json'
       - 'schema.sql'
@@ -38,11 +38,11 @@ jobs:
           echo '4a5cc2f53e6f0f8c59092a6cc38291eb729d46a7dd95d3ae582008881b84931d  /tmp/just.tar.gz' | sha256sum -c -
           sudo tar -xzf /tmp/just.tar.gz -C /usr/local/bin just
           df -h .
-      - name: Run the exact assignment entry point
-        run: just
-      - name: Scientific semantics tests
-        run: podman run --rm --userns=keep-id -v "$PWD:/work:Z" -w /work special-topic-etl make test
-      - name: Report the generated database
+      - name: Run the assignment pipeline (DB and safetensors)
+        run: just pipeline
+      - name: Check DB, tensors and tests
+        run: just check
+      - name: Report the generated outputs
         run: |
-          cat data/validation.json
-          ls -lh data/particles.db data/figures/*.png
+          cat data/validation.json data/inputs/tensors_validation.json
+          ls -lh data/particles.db data/figures/*.png data/inputs/*.safetensors

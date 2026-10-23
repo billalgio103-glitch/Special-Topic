@@ -4,3 +4,5 @@ pillow==12.3.0
 h5py==3.14.0
 ncempy==1.16
 matplotlib==3.10.8
+safetensors==0.8.0
+torch==2.14.1

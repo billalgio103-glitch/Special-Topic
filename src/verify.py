@@ -31,12 +31,12 @@ def verify(data_dir, allow_subset=False):
     con.row_factory = sqlite3.Row
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok", "SQLite integrity failure"
     assert not con.execute("PRAGMA foreign_key_check").fetchall(), "Broken foreign key"
-    counts = dict(con.execute("SELECT source_id,COUNT(*) FROM images GROUP BY source_id"))
-    expected = dict(con.execute("SELECT source_id,expected_samples FROM sources"))
+    counts = dict(con.execute("SELECT source_id,COUNT(*) FROM images GROUP BY source_id ORDER BY source_id"))
+    expected = dict(con.execute("SELECT source_id,expected_samples FROM sources ORDER BY source_id"))
     if not allow_subset:
         assert counts == expected, f"Incomplete dataset: {counts}; expected {expected}"
-    assert not con.execute("SELECT group_id FROM images GROUP BY group_id HAVING COUNT(DISTINCT split)>1").fetchall(), "Group leakage"
-    assert not con.execute("SELECT a.sha256 FROM images i JOIN assets a ON a.asset_path=i.image_asset WHERE i.array_index IS NULL GROUP BY a.sha256 HAVING COUNT(DISTINCT i.split)>1").fetchall(), "Duplicate image leakage"
+    assert not con.execute("SELECT group_id FROM images GROUP BY group_id HAVING COUNT(DISTINCT split)>1 ORDER BY group_id").fetchall(), "Group leakage"
+    assert not con.execute("SELECT a.sha256 FROM images i JOIN assets a ON a.asset_path=i.image_asset WHERE i.array_index IS NULL GROUP BY a.sha256 HAVING COUNT(DISTINCT i.split)>1 ORDER BY a.sha256").fetchall(), "Duplicate image leakage"
     for row in con.execute("SELECT * FROM assets ORDER BY asset_path"):
         raw = data_dir / "raw" / row["asset_path"]
         assert raw.stat().st_size == row["bytes"], f"Raw size mismatch: {raw}"
@@ -55,7 +55,7 @@ def verify(data_dir, allow_subset=False):
               "source_counts": counts, "expected_counts": expected,
               "database_fingerprint": fingerprint(con),
               "objects": con.execute("SELECT COUNT(*) FROM objects").fetchone()[0],
-              "calibration_counts": [dict(r) for r in con.execute("SELECT source_id,calibration_status,COUNT(*) AS n FROM images GROUP BY source_id,calibration_status")],
+              "calibration_counts": [dict(r) for r in con.execute("SELECT source_id,calibration_status,COUNT(*) AS n FROM images GROUP BY source_id,calibration_status ORDER BY source_id,calibration_status")],
               "splits": [dict(r) for r in con.execute("SELECT * FROM dataset_summary ORDER BY source_id,split")]}
     con.close()
     write_text(data_dir / "validation.json", json.dumps(report, indent=2) + "\n")
