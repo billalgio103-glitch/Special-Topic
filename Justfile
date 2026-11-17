@@ -3,10 +3,11 @@ set shell := ["bash", "-euc"]
 image := "special-topic-etl"
 run := 'podman run --rm --userns=keep-id -v "$PWD:/work:Z" -w /work ' + image
 
-# Submission entry point: Justfile -> Containerfile -> Makefile -> src/*.py -> DB -> safetensors.
+# Submission entry point: Justfile -> Containerfile -> Makefile -> src/*.py -> DB -> tensors
+# -> data/model/results.json -> report/report.typ -> report/report.pdf.
 default: pipeline
 
-# Download, build data/particles.db, then export data/inputs/{train,eval}.safetensors.
+# Download, build the DB, export tensors, train (only if inputs changed), write the report PDF.
 pipeline: build
     mkdir -p data
     {{run}} make all

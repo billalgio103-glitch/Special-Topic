@@ -2,7 +2,8 @@
 
 Course project: combine EMPS, HRTEM nanoparticles, and Co3O4 training data into
 one SQLite database for segmentation model development and preliminary figures.
-This repository implements the ETL stage, not model training or the instructor's
+The repository covers the ETL stage, a first segmentation model, and a Typst
+report built from the model's results. It does not include the instructor's
 held-out evaluation server.
 
 ## Assignment submission and execution
@@ -22,8 +23,10 @@ system requires a Podman VM, then run the assignment's one-line command:
 git clone https://github.com/billalgio103-glitch/Special-Topic.git && cd Special-Topic && just && just check
 ```
 
-`just` is the same as `just pipeline`. It builds the DB and then writes the model
-inputs `data/inputs/train.safetensors` and `data/inputs/eval.safetensors`.
+`just` is the same as `just pipeline`. It builds the DB, writes the model inputs
+`data/inputs/train.safetensors` and `data/inputs/eval.safetensors`, trains a
+U-Net (training steps and curves print to stdout), and compiles
+`report/report.pdf` from `data/model/results.json`.
 `just check` verifies the DB again, reloads both tensor files with PyTorch and
 runs the unit tests.
 
@@ -41,7 +44,7 @@ stable connection. Subsequent runs verify and reuse cached source files.
 
 The entry point follows the supplied template's direct-Podman route:
 
-`Justfile -> Containerfile -> Makefile -> src/*.py -> data/particles.db -> data/inputs/{train,eval}.safetensors`
+`Justfile -> Containerfile -> Makefile -> src/*.py -> data/particles.db -> data/inputs/*.safetensors -> data/model/results.json -> report/report.typ -> report/report.pdf`
 
 `compose.yml` is unnecessary for this single-container workflow. The default
 recipe downloads all three sources and fails if a required file is unavailable
@@ -62,6 +65,10 @@ or corrupted. It never silently substitutes synthetic data or submits a subset.
 | `data/inputs/train.safetensors` | Model inputs: DB `train` + `validation` groups, with group k-fold ids |
 | `data/inputs/eval.safetensors` | Held-out model inputs: DB `test` groups only |
 | `data/inputs/tensors_validation.json` | Tensor reload, shape and leakage checks; file SHA-256 |
+| `data/model/results.json` | Training history, held-out test AUC for the model and both controls, ROC points |
+| `data/model/model.safetensors` | Trained U-Net weights (selected epoch) |
+| `data/model/figures/` | Training curve, test ROC curves, test example predictions |
+| `report/report.pdf` | Report compiled from `report/report.typ` and the files above |
 
 ## Generated result preview
 
@@ -154,6 +161,38 @@ refuses to write if an image or group appears in both files. `check_tensors.py`
 recomputes the expected rows from the DB, checks that each group has a single
 fold, and checks that both files carry the current DB fingerprint. The Co3O4
 source is one group. It is all in `train` and in one fold.
+
+## Model and report
+
+`src/train.py` trains a small three-level U-Net (`src/model.py`) on
+`train.safetensors`. One group fold (`--val-fold`, default 1) is held back for
+validation and picks the best epoch. The held-out `eval.safetensors` is used once,
+after training, for the reported metric: pixel ROC AUC, overall and per source.
+Training prints every step's loss, an epoch summary and text sparklines of the
+loss and validation AUC.
+
+The model is reported next to two controls:
+
+- **Negative (dummy):** every pixel gets the training foreground fraction. It
+  cannot rank pixels, so its AUC must be exactly 0.5.
+- **Positive:** the true mask plus seeded Gaussian noise (σ = 0.5). Its expected
+  AUC is Φ(1/(σ√2)) ≈ 0.921.
+
+If either control misses its expected value, training stops with an error, so a
+broken metric cannot reach the report. Training is seeded, uses deterministic
+torch algorithms and a fixed thread count, and gives the same `results.json`
+on a rerun with the same inputs.
+
+`src/model_figures.py` draws the figures and `src/build_report.py` compiles
+`report/report.typ` with Typst (the `typst` Python package, embedded fonts only).
+The report reads every number and figure from the pipeline outputs.
+
+**Re-running after a data change.** The model stages in the `Makefile` are file
+targets. `results.json` depends on both tensor files and the model code, and
+`export_tensors.py` leaves a tensor file untouched when its contents are unchanged.
+So `just` retrains and rebuilds the figures and PDF when the training data changes,
+and skips training otherwise. Pass `TRAIN_ARGS` to `make`, for example
+`make all TRAIN_ARGS="--epochs 2"`, for a quicker run.
 
 ## Sources and conversions
 

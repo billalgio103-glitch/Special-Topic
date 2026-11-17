@@ -27,3 +27,4 @@ six==1.17.0
 sympy==1.14.0
 torch==2.14.1+cpu
 typing-extensions==4.16.0
+typst==0.15.2

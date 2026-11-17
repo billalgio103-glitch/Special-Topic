@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'report/**'
       - 'tests/**'
       - 'sources.lock.json'
       - 'schema.sql'
@@ -45,4 +46,13 @@ jobs:
       - name: Report the generated outputs
         run: |
           cat data/validation.json data/inputs/tensors_validation.json
-          ls -lh data/particles.db data/figures/*.png data/inputs/*.safetensors
+          python3 -c "import json; r = json.load(open('data/model/results.json')); print({k: v['auc'] for k, v in r['test'].items()})"
+          ls -lh data/particles.db data/figures/*.png data/inputs/*.safetensors data/model report/report.pdf
+      - name: Upload the report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: report
+          path: |
+            report/report.pdf
+            data/model/results.json
+            data/model/figures/*.png

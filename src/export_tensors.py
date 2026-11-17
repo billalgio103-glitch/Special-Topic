@@ -97,7 +97,10 @@ def export(data_dir, size=SIZE, k=K_FOLDS, seed=SEED, allow_subset=False):
     for name, part in partitions.items():
         print(f"Exporting {len(part)} images to {out / name}.safetensors", flush=True)
         payload = build_file(part, data_dir, folds if name == "train" else None, dict(common_meta, partition=name), size)
-        write_bytes(out / f"{name}.safetensors", payload)
+        path = out / f"{name}.safetensors"
+        # Leave identical files untouched so make only retrains when the data changed.
+        if not (path.is_file() and path.read_bytes() == payload):
+            write_bytes(path, payload)
     return {name: len(part) for name, part in partitions.items()}
 
 
