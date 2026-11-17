@@ -1,0 +1,20 @@
+{
+  "workflow_url": "https://github.com/billalgio103-glitch/Special-Topic/actions/runs/44169351848",
+  "run_id": 44169351848,
+  "job_id": 134343945320,
+  "source_commit": "064a802477948b4fa28e6cf512a46c9329182a57",
+  "status": "completed",
+  "conclusion": "success",
+  "job_started_at": "2026-11-17T20:26:42Z",
+  "duration": "28m 5s",
+  "environment": "Ubuntu 24.04; Podman; pinned Containerfile",
+  "entry_points": ["just pipeline", "just check"],
+  "tests_passed": 19,
+  "database_fingerprint": "cab870d82508ffcb3589248f91797cef2ab4e00fbb51bddf8413da16d310c5a3",
+  "train_safetensors_sha256": "f0c46d30c570e6b508bfb72c4251f2351d1c6f9b7878531e4149890267f88260",
+  "eval_safetensors_sha256": "efc1fb8d5644d5c5e70b4c05607a1e8a363aafabab097155d6dbdbfb01c4f203",
+  "test_pixel_auc": {"unet": 0.920942847941587, "dummy": 0.5, "positive_control": 0.9214039184594841},
+  "report_artifact": {"name": "report", "bytes": 1181962,
+                      "sha256": "a323be4b303483878c3d3acb62dd3003111aac8daa2b4b2d96481af9f008d809",
+                      "report_pdf_pages": 3}
+}

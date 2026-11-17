@@ -140,3 +140,36 @@ split follows whole groups. Results for this selection:
 
 The two-build tensor comparison (`just idempotency`) has been run on this subset
 only, not on the full data.
+
+## Model & Report Part I: training and report
+
+[Workflow run #8](https://github.com/billalgio103-glitch/Special-Topic/actions/runs/44169351848)
+ran `just pipeline` and `just check` on commit `064a802` on a clean Ubuntu 24.04
+runner. **It passed on 2026-11-17** in 28 minutes, about 10 of them training. All
+19 container tests passed.
+
+The pipeline produced the same DB fingerprint (`cab870d8...c5a3`) and the same
+tensor files as the Part II run (`train` `f0c46d30...`, `eval` `efc1fb8d...`).
+Training used 887 fit images, 95 validation images (fold 1) and 146 held-out test
+images, for 6 epochs on CPU. Epoch 5 had the best validation AUC (0.861) and was kept.
+
+| Held-out test | Pixel AUC | EMPS | HRTEM |
+| --- | ---: | ---: | ---: |
+| U-Net | 0.921 | 0.864 | 0.908 |
+| Negative control (dummy) | 0.500 | 0.500 | 0.500 |
+| Positive control (noisy truth, expected 0.921) | 0.921 | 0.922 | 0.921 |
+
+U-Net Dice at threshold 0.5 was 0.686. There are no Co3O4 test images.
+
+The uploaded `report` artifact held a three-page `report/report.pdf` with all four
+figures, plus `results.json` and the figure PNGs. The PDF text and figures were
+checked by hand after download.
+
+See [`validation/ci-model-run.json`](validation/ci-model-run.json) and
+[`validation/ci-model-results.json`](validation/ci-model-results.json), a copy of the
+run's `data/model/results.json`.
+
+The U-Net AUC equals the positive control's here. That control only checks the
+metric code (σ = 0.5 noise on the true mask), so it is not a ceiling for the model.
+The "retrain when the data changes" rule was checked on the development subset
+(an unchanged rebuild left the tensor files untouched), not on the full data.
